@@ -1,7 +1,8 @@
-import logging
 import os
-import httpx
+import logging
 from typing import Any
+
+import httpx
 
 from reachy_mini_conversation_app.tools.core_tools import Tool, ToolDependencies
 
@@ -38,7 +39,6 @@ async def classify_with_jev(
     student_reasoning: str,
 ) -> dict[str, Any]:
     """Send the student's work directly to the Jev API."""
-
     api_key = os.getenv("TYPESAFE_API_KEY")
     if not api_key:
         raise RuntimeError("TYPESAFE_API_KEY is not configured")
@@ -143,6 +143,7 @@ class DiagnoseMathWork(Tool):
         deps: ToolDependencies,
         **kwargs: Any,
     ) -> dict[str, Any]:
+        """Validate the inputs and return Jev's mistake classification."""
         problem = str(kwargs.get("problem", "")).strip()
         student_answer = str(kwargs.get("student_answer", "")).strip()
         student_reasoning = str(
