@@ -12,23 +12,17 @@ logger = logging.getLogger(__name__)
 
 MISTAKE_CATEGORIES = {
     "arithmetic_error": (
-        "The student chose an appropriate method but made a numerical "
-        "calculation or basic arithmetic mistake."
+        "The student chose an appropriate method but made a numerical calculation or basic arithmetic mistake."
     ),
-    "conceptual_error": (
-        "The student misunderstands an important mathematical concept."
-    ),
+    "conceptual_error": ("The student misunderstands an important mathematical concept."),
     "procedural_error": (
-        "The student understands the general concept but applies a rule, "
-        "formula, or sequence of steps incorrectly."
+        "The student understands the general concept but applies a rule, formula, or sequence of steps incorrectly."
     ),
     "misread_problem": (
-        "The student misunderstood the wording, quantities, conditions, "
-        "or what the problem was asking."
+        "The student misunderstood the wording, quantities, conditions, or what the problem was asking."
     ),
     "insufficient_evidence": (
-        "The available answer and reasoning do not contain enough information "
-        "to identify the mistake reliably."
+        "The available answer and reasoning do not contain enough information to identify the mistake reliably."
     ),
 }
 
@@ -78,8 +72,7 @@ async def classify_with_jev(
     answer = response_data["answers"]["mistake_category"]
 
     probabilities = {
-        category: round(float(probability), 4)
-        for category, probability in answer["probabilities"].items()
+        category: round(float(probability), 4) for category, probability in answer["probabilities"].items()
     }
 
     ranked = sorted(
@@ -95,11 +88,9 @@ async def classify_with_jev(
         "category": answer["choice"],
         "confidence": float(answer["confidence"]),
         "probabilities": probabilities,
-        "needs_clarification": (
-            top_probability < 0.65
-            or top_probability - second_probability < 0.15
-        ),
+        "needs_clarification": (top_probability < 0.65 or top_probability - second_probability < 0.15),
     }
+
 
 class DiagnoseMathWork(Tool):
     """Classify the likely mistake in a student's math reasoning."""
@@ -125,10 +116,7 @@ class DiagnoseMathWork(Tool):
             },
             "student_reasoning": {
                 "type": "string",
-                "description": (
-                    "The student's explanation, intermediate steps, or "
-                    "transcribed spoken reasoning."
-                ),
+                "description": ("The student's explanation, intermediate steps, or transcribed spoken reasoning."),
             },
         },
         "required": [
@@ -146,17 +134,10 @@ class DiagnoseMathWork(Tool):
         """Validate the inputs and return Jev's mistake classification."""
         problem = str(kwargs.get("problem", "")).strip()
         student_answer = str(kwargs.get("student_answer", "")).strip()
-        student_reasoning = str(
-            kwargs.get("student_reasoning", "")
-        ).strip()
+        student_reasoning = str(kwargs.get("student_reasoning", "")).strip()
 
         if not problem or not student_answer or not student_reasoning:
-            return {
-                "error": (
-                    "problem, student_answer, and student_reasoning "
-                    "must all be provided"
-                )
-            }
+            return {"error": ("problem, student_answer, and student_reasoning must all be provided")}
 
         try:
             # The Jev SDK is synchronous, so run it outside the app's
