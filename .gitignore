@@ -50,6 +50,7 @@ coverage.xml
 # Temporary files
 tmp/
 *.log
+transcripts/
 cache/
 
 # macOS

@@ -9,6 +9,7 @@ import asyncio
 import logging
 from typing import Any, List, Optional
 from pathlib import Path
+from datetime import datetime
 from collections.abc import Callable
 
 import numpy as np
@@ -45,6 +46,7 @@ from reachy_mini_conversation_app.settings_store import (
     apply_settings_to_runtime,
     load_settings_into_runtime,
 )
+from reachy_mini_conversation_app.transcript_log import append_transcript_lines, set_active_transcript_path
 from reachy_mini_conversation_app.language_routes import register_language_methods
 from reachy_mini_conversation_app.startup_settings import read_startup_settings, write_startup_settings
 from reachy_mini_conversation_app.tools.core_tools import ToolDependencies, initialize_tools
@@ -148,6 +150,9 @@ class LocalStream:
         # here from activity + transcripts. Survives handler rebuilds (mounted once).
         self._rpc: Optional[JsonRpcServer] = None
         self._last_turn_state: Optional[str] = None
+        self._transcript_started = False
+        self._transcript_path = self._create_transcript_file()
+        set_active_transcript_path(self._transcript_path)
         # Per-role throttle timestamps for conversation.level (orb audio meter).
         self._last_level_emit: dict[str, float] = {}
         self._install_handler(handler)
@@ -167,8 +172,36 @@ class LocalStream:
         if callable(transcript_setter):
             transcript_setter(self._dispatch_transcript)
 
+    def _create_transcript_file(self) -> Path | None:
+        """Create one timestamped transcript file for this app session."""
+        started_at = datetime.now().astimezone()
+        transcript_directory = Path.cwd() / "transcripts"
+        transcript_path = transcript_directory / f"conversation_{started_at:%Y-%m-%d_%H-%M-%S}.log"
+        try:
+            transcript_directory.mkdir(parents=True, exist_ok=True)
+            transcript_path.write_text(
+                f"Conversation started: {started_at.isoformat(timespec='seconds')}\n\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            logger.exception("Could not create transcript file at %s", transcript_path)
+            return None
+
+        print(f"Transcript file: {transcript_path}", flush=True)
+        return transcript_path
+
     def _dispatch_transcript(self, role: str, text: str, final: bool) -> None:
         """Push a conversation.transcript notification to JSON-RPC clients."""
+        transcript_text = text.strip()
+        if final and transcript_text:
+            if not self._transcript_started:
+                print("\n=== CONVERSATION TRANSCRIPT ===", flush=True)
+                self._transcript_started = True
+            speaker = "STUDENT" if role == "user" else "REACHY"
+            transcript_line = f"{speaker}: {transcript_text}"
+            print(transcript_line, flush=True)
+            append_transcript_lines([transcript_line])
+
         if self._rpc is not None:
             self._rpc.broadcast_threadsafe(
                 "conversation.transcript",
